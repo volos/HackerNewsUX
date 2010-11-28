@@ -1,0 +1,21 @@
+a.lnk_out:link {color: 0033CC };
+a.lnk_out:hover {color: 0033CC };
+a.lnk_out:visited {color: 0033CC };
+
+body {
+font-size:0px;
+}
+.tooltip_text {
+color:black;font-size:14px;font-family:arial;
+}
+
+#Test
+{
+font-size:12px;
+font-family:arial;
+    position: absolute;
+    visibility: hidden;
+    height: auto;
+    width: 400px;
+left:-10000px;
+}

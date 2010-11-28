@@ -1,0 +1,39 @@
+<html>
+<head>
+</head>
+
+<script>
+
+/*chrome.extension.onConnect.addListener(function(port) {
+	var tab=request.sender.tab;
+
+});*/
+function onRequest(request, sender, sendResponse) {
+
+    if (request.user_info !=null) {
+       
+	openXML(request.user_info,function () {  
+		 if (req.readyState == 4) {
+	            if (req.status == 200) {
+			sendResponse({contents: req})
+		    }
+	  	 }
+		});
+ 	
+    }  
+}
+
+chrome.extension.onRequest.addListener(onRequest);
+
+var req=new XMLHttpRequest();
+
+function openXML(url,callback,method) {
+	req.onreadystatechange = callback;
+	req.open(((method==null)?"GET":method),url,true);
+	req.send();
+}
+
+</script>
+<body>
+</body>
+</html>
