@@ -171,11 +171,11 @@ try {
 				newest_content.innerHTML=tmp.getElementsByTagName("td")[4].innerHTML;
 				resizeSlide();
 				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input type=submit onclick=\"function enableForm(form,flag){flag=(flag==null)?false:true; for (var el in document.forms[0].elements){ document.forms[0].elements[el].disabled=flag;} } function send(){ try { enableForm(document.forms[0],false); } catch (ex) {alert('ex4::'+ex.message);} loadURL(document.forms[0].action+'?fnid='+document.forms[0].elements[0].value+'&text='+document.forms[0].elements[1].value,function() { if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);/*document.forms[0].elements[1].innerHTML='';*/},document.forms[0].method); return false;} return send();\" value=\"add comment\">");
-/*				newest_content.innerHTML+="<div id='inj' onclick=\"req=new XMLHttpRequest(); loadURL=function (url,callback,method) {req.onreadystatechange = callback;req.open(((method==null)?'GET':method),url,true);req.send();} \">";	
+				newest_content.innerHTML+="<div id='inj' onclick=\"req=new XMLHttpRequest(); loadURL=function (url,callback,method) {req.onreadystatechange = callback;req.open(((method==null)?'GET':method),url,true);req.send();} \">";	
 				window.setTimeout(function() {var ev=document.createEvent("UIEvent");
 				ev.initUIEvent('click',true,true);
 				document.getElementById("inj").dispatchEvent(ev);},1000);
-			*/
+			
 
 			};
 
