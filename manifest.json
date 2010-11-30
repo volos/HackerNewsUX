@@ -1,6 +1,6 @@
 {
   "name": "Hacker News UX",
-  "version": "1.01",
+  "version": "1.2.1.0",
   "description": "HackerNe.ws improve user experience experiment.",
  "background_page": "background.html",
  
