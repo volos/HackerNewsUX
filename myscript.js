@@ -119,14 +119,17 @@ td1=document.createElement("td");
 td1.appendChild(news_table);
 td1.vAlign="top";
 td1.id='news';
+//td1.width="80%";
 tr1.appendChild(td1);
 
 tmp=document.createElement("td");
-tmp.pixelWidth="10";
+tmp.width="1%";
 tmp.innerHTML="&nbsp;";
 tr1.appendChild(tmp);
 
 td2=document.createElement("td");
+td2.width='20%';
+td2.id='td2';
 td2.vAlign="top";
 td2.style.borderLeft="1px solid #dfdfdf";
 td2.innerHTML="<div id='$content_newest' style='margin-left:6px;color:black'>"+"<img src='"+sIMG_LOADER+"'>"+"</div>";//";//<iframe id='$content_iframe' frameborder=0 style='display:none;width:100%;height:100%'></iframe>
@@ -134,7 +137,9 @@ tr1.appendChild(td2);
 
 tb1.appendChild(tr1);
 t1.appendChild(tb1);
-
+/*
+the problem is that threads are created by changing the width of a transparent image to a set width in pixels, therefore a table with a width% that results in less when calc-ed than the maximum trnsprent image width, the column cannot be minimized to 25%;
+*/
 
 document.getElementsByTagName("td")[4].innerHTML="";
 t1.style.padding = "0px 0px";
@@ -143,11 +148,14 @@ t1.cellSpacing = "0";
 
 document.getElementsByTagName("td")[4].appendChild(t1);
 
-_url="http://"+document.location.host+"/newest"; //alert(_url);
-window.setTimeout(function() {loadURL(_url,response_newest);}, update_time);
+var _to="/newest";
+if ((_url=localStorage['current_page'])==null) {_url="http://"+document.location.host+_to;}; 
+
+var cb=((localStorage['current_page']!=null)?callback_click:response_newest);
+
+window.setTimeout(function() {loadURL(_url,cb);}, update_time);
 
 var a=document.getElementsByTagName("a");
-var callback_click;
 
 for (var l in a) {
 if (dynamic_link(a[l])) 
@@ -161,25 +169,8 @@ try {
 		loading_link=this;
 		loading_link.innerHTML+="&nbsp;<img src='"+sIMG_LOADER+"'>";
 
-			
-			callback_click=function(data) {
-				//remove hourglass
-				loading_link.innerHTML=loading_link.innerHTML.substring(0,loading_link.innerHTML.indexOf("&"));				
-				var tmp=document.createElement("div");
-				tmp.innerHTML=data.contents.responseText;
-				var newest_content=document.getElementById('$content_newest');
-				newest_content.innerHTML=tmp.getElementsByTagName("td")[4].innerHTML;
-				resizeSlide();
-				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input type=submit onclick=\"function enableForm(form,flag){flag=(flag==null)?false:true; for (var el in document.forms[0].elements){ document.forms[0].elements[el].disabled=flag;} } function send(){ try { enableForm(document.forms[0],false); } catch (ex) {alert('ex4::'+ex.message);} loadURL(document.forms[0].action+'?fnid='+document.forms[0].elements[0].value+'&text='+document.forms[0].elements[1].value,function() { if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);/*document.forms[0].elements[1].innerHTML='';*/},document.forms[0].method); return false;} return send();\" value=\"add comment\">");
-				newest_content.innerHTML+="<div id='inj' onclick=\"req=new XMLHttpRequest(); loadURL=function (url,callback,method) {req.onreadystatechange = callback;req.open(((method==null)?'GET':method),url,true);req.send();} \">";	
-				window.setTimeout(function() {var ev=document.createEvent("UIEvent");
-				ev.initUIEvent('click',true,true);
-				document.getElementById("inj").dispatchEvent(ev);},1000);
-			
 
-			};
-
-		loadURL(this.href,callback_click);
+		loadURL(this.href,function(data) {callback_click(data,true);});
 
 } catch (e) {alert('1::'+e.message);}		
 		return false;
@@ -188,6 +179,48 @@ try {
 
 
 } 
+var loading_link;
+var MANUAL_CLICK=true;
+function callback_click(data,user_click) {
+				if(loading_link!=null) {
+						if(loading_link.innerHTML.indexOf("&")!=-1) loading_link.innerHTML=loading_link.innerHTML.substring(0,loading_link.innerHTML.indexOf("&"));				
+						localStorage['current_page']=loading_link.href;
+					}
+
+				var tmp=document.createElement("div");
+				tmp.innerHTML=data.contents.responseText;
+				var ta=tmp.getElementsByTagName("textarea");
+				if (ta!=null) {ta[0].cols=null; ta[0].style.width="100%";}
+				var newest_content=document.getElementById('$content_newest');
+				newest_content.innerHTML=tmp.getElementsByTagName("td")[4].innerHTML;
+			
+				resizeSlide(65);
+				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input type=submit onclick=\"function enableForm(form,flag){flag=(flag==null)?false:true; for (var el in document.forms[0].elements){ document.forms[0].elements[el].disabled=flag;} } function send(){ try { enableForm(document.forms[0],false); } catch (ex) {alert('ex4::'+ex.message);} loadURL(document.forms[0].action+'?fnid='+document.forms[0].elements[0].value+'&text='+document.forms[0].elements[1].value,function() { if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);/*document.forms[0].elements[1].innerHTML='';*/},document.forms[0].method); return false;} return send();\" value=\"add comment\">");				
+				if (user_click) {
+					//remove hourglass
+					
+					var s; t=500;//msec, in how much time to complete the visual
+					var interval=30; //update interval of screen
+			
+					var steps=t/interval;//determines smoothness
+
+					if ((s=parseInt(BODY.scrollTop))>0) {
+						v=(s*1000)/t; //velocity per ms, to complete the distance in req. time
+
+					s=(v/1000)*interval;
+						
+					animate(function () {
+	
+						if (parseInt(BODY.scrollTop)>0) {
+							BODY.scrollTop-=s;	
+							return true;
+						}
+					return false;
+					});}
+					
+				} else {localStorage.removeItem('current_page');}
+				
+			}
 
 var vote_function="function vote2(node) {GLO='1';"+//"var node=this;"+
 ""+
@@ -211,43 +244,42 @@ var vote_function="function vote2(node) {GLO='1';"+//"var node=this;"+
 
 "  var ping = new Image();ping.src = node.href; return false;} return vote2(this); ";
 
-function resizeSlide() {
-	var news_col=document.getElementById('news');
-	if (!isNaN(news_col.width)) {
-		news_col.width="50%";
-		window.setTimeout(function() {animate()},30);
-	}
+function resizeSlide(targetWidth) {
+	var news_col=document.getElementById('td2');
+	 
+		animate(function() {w=parseInt(document.getElementById('td2').width);
+
+				if (w<targetWidth) {//w>37){	
+					document.getElementById('td2').width=String(parseInt(w+1))+"%";	
+					return true;	
+				}
+				return false;
+			}
+		); 
 }
-function animate() {
-	w=parseInt(document.getElementById('news').width);
-
-	if (w>37){	
-		document.getElementById('news').width=String(parseInt(w-1))+"%";	
-		window.setTimeout(function() {animate()},25);	
-	}
+function animate(callback) {
+	var speed;
+	if (callback()) window.setTimeout(function() {animate(callback)},30);
 }
 
-function response_newest(data) {
-data.contents=data.contents.responseText;
-var content_newest =document.getElementById("$content_newest");
+function response_newest(data) { 
+	data.contents=data.contents.responseText;
+	var content_newest =document.getElementById("$content_newest");
 
- q='<tr><td><table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">(.*)More</a></td></tr></table></td></tr><tr><td>';
+	resizeSlide(50);
+	 q='<tr><td><table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">(.*)More</a></td></tr></table></td></tr><tr><td>';
 
-re=new RegExp(q,"g");
-m = data.contents.match(re);
+	re=new RegExp(q,"g");
+	m = data.contents.match(re);
 	if ( m != null) {
 		for ( i = 0; i < m.length; i++ ) { 
 			content_newest.innerHTML=m[i];//'<table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">'+RegExp.$1+"</table>";
 		}
 	}
  
-content_newest.innerHTML=content_newest.innerHTML.replace(/id=\"([^\s>]*)\"/g,"id=\"$1_HN\"");
-content_newest.innerHTML=content_newest.innerHTML.replace(/return (vote\(this\))/g,vote_function);
- 
+	content_newest.innerHTML=content_newest.innerHTML.replace(/id=\"([^\s>]*)\"/g,"id=\"$1_HN\"");
+	content_newest.innerHTML=content_newest.innerHTML.replace(/return (vote\(this\))/g,vote_function);
 }
-
-
-
 
 function startup() {
 	username_hover=new PopupMessage();
@@ -306,7 +338,7 @@ if (AVAILABLE)  {
 
 
 //loadurl script
-var s=document.createElement("script"); s.innerHTML="req=new XMLHttpRequest(); loadURL=function (url,callback,method) {req.onreadystatechange = callback;req.open(((method==null)?'GET':method),url,true);req.send();}";
+var s=document.createElement("script"); s.innerHTML="req=new XMLHttpRequest(); loadURL=function (url,callback,method) {req.onreadystatechange = callback;req.open(((method==null)?'GET':method),url,true);req.send();} ";
 document.body.appendChild(s);
 
 }  //-end-startup()
