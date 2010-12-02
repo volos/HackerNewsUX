@@ -163,16 +163,17 @@ var cb=((localStorage['current_page']!=null)?callback_click:response_newest);
 window.setTimeout(function() {loadURL(_url,cb);}, update_time);
 
 } 
-
+var reply_forms=0;
 function callback_reply(data) {
 	deleteHourglass(reply_link);
 	neo=document.createElement("div");
 	neo.innerHTML=data.contents.responseText;
 	var frm=neo.getElementsByTagName("form");
-	frm[0].id="reply_form";
+
+	frm[0].id="reply_form"+(++reply_forms);
 	
 //replace the functionality of the submit button
-	neo.innerHTML=neo.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input type=submit onclick=\""+String(enableForm)+" function send(_frm){ try { enableForm(_frm,false); } catch (ex) {alert('ex4::'+ex.message);} loadURL(_frm.action+'?fnid='+_frm.elements[0].value+'&text='+_frm.elements[1].value,function() { if (_frm.elements[1].value.length==0) enableForm(_frm);},_frm.method); return false;} return send(document.forms['reply_form']);\" value=\"reply\">");				
+	neo.innerHTML=neo.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input type=submit onclick=\""+String(enableForm)+" function send(_frm){ try { enableForm(_frm,false); } catch (ex) {alert('ex4::'+ex.message);} loadURL(_frm.action+'?fnid='+_frm.elements[0].value+'&text='+_frm.elements[1].value,function() { if (_frm.elements[1].value.length==0) enableForm(_frm);},_frm.method); return false;} return send(document.forms['reply_form"+reply_forms+"']);\" value=\"reply\">");				
 	neo.innerHTML=frm[0].outerHTML;
 
 	reply_link.parentNode.insertBefore(neo,reply_link.nextSibling)		
