@@ -8,29 +8,59 @@
 	var tab=request.sender.tab;
 
 });*/
+
+/*
+sendResponse is the callback
+*/
 function onRequest(request, sender, sendResponse) {
 
     if (request.user_info !=null) {
-       
-	openXML(request.user_info,function () {  
+
+	QUEUE({url:request.user_info,callback:function () {  
 		 if (req.readyState == 4) {
 	            if (req.status == 200) {
 			sendResponse({contents: req})
 		    }
+		    executeQueue(true);
 	  	 }
-		});
+		}
+	});
  	
     }  
 }
 
 chrome.extension.onRequest.addListener(onRequest);
 
+var XHR=[];
+var xhr_cursor=0;
+var xhr_loading=0;
 var req=new XMLHttpRequest();
 
 function openXML(url,callback,method) {
-	req.onreadystatechange = callback;
+	req.onreadystatechange = function() { callback(); }
 	req.open(((method==null)?"GET":method),url,true);
 	req.send();
+}
+
+function QUEUE(params) {
+	XHR[XHR.length]=params;
+	if (xhr_loading==0) executeQueue();
+}
+
+function executeQueue(wait) {
+	if (XHR.length>0 && xhr_cursor+1<=XHR.length) {
+		xhr_loading=1;
+	 	if (wait) { //to get outside of the recursive, if called within onreadystatechange
+			window.setTimeout(function() {execute();},100);
+		} else {
+			execute();
+		}
+	} else { xhr_loading=0; XHR=[]; xhr_cursor=0;}
+}
+function execute() {
+	var params=XHR[xhr_cursor++];
+	if (params!=undefined) openXML(params.url, params.callback);
+	
 }
 
 </script>
