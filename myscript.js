@@ -113,19 +113,30 @@ function link_type(t) {
 	return false;
 }
 
+var EVENTS={CLICK:"click"};
 
-function alter_content() {
-news_table=document.getElementsByTagName("table")[2].cloneNode(true)
+function getNewsTableFrom(container) { 
+	return container.getElementsByTagName("table")[2].cloneNode(true);
+}
 
+function right_panel() {
+//change more functionality to dynamic
+
+//alert(BODY.innerHTML.match(new RegExp("<a href=\"([^\r\n\s<>]*)\" rel=\"nofollow\"[^>]*>More</a>")));
+
+
+// append right column
+
+news_table=getNewsTableFrom(document);
 
 t1=document.createElement("table");
 tb1=document.createElement("tbody");
 tr1=document.createElement("tr");
 
 td1=document.createElement("td");
+td1.id='news';
 td1.appendChild(news_table);
 td1.vAlign="top";
-td1.id='news';
 //td1.width="80%";
 tr1.appendChild(td1);
 
@@ -149,18 +160,24 @@ the problem is that threads are created by changing the width of a transparent i
 */
 
 document.getElementsByTagName("td")[4].innerHTML="";
+
 t1.style.padding = "0px 0px";
 t1.cellPadding = "0";
 t1.cellSpacing = "0";
 
 document.getElementsByTagName("td")[4].appendChild(t1);
 
+
 var _to="/newest";
 if ((_url=localStorage['current_page'])==null) {_url="http://"+document.location.host+_to;}; 
 
-var cb=((localStorage['current_page']!=null)?callback_click:response_newest);
 
-window.setTimeout(function() {loadURL(_url,cb);}, update_time);
+try {
+	more_news.replace(); //if replacemetn made before t1 appended, make sure there isnt direct call to document.innerhtml because news_table wont exist already
+} catch (Ex1) {alert('ex1::'+Ex1.message);}
+finally{
+window.setTimeout(function() {loadURL(_url,((localStorage['current_page']!=null)?callback_click:response_newest)); }, update_time);
+}
 
 } 
 var reply_forms=0;
@@ -279,9 +296,13 @@ function response_newest(data) {
  
 	content_newest.innerHTML=content_newest.innerHTML.replace(/id=\"([^\s>]*)\"/g,"id=\"$1_HN\"");
 	content_newest.innerHTML=content_newest.innerHTML.replace(/return (vote\(this\))/g,vote_function);
+	more_newest.replace();
 }
 
+var _; //instance of the dom framework
 function startup() {
+	_=new DOM(BODY);
+
 	username_hover=new PopupMessage();
 	username_hover_out=new PopupMessage();
 
@@ -302,13 +323,14 @@ if (AVAILABLE)  {
 
   for (var j in NEWS_PAGE) {
     if (document.location.href=="http://"+NEWS_PAGE[j]) { 
-	alter_content();
+	right_panel();
+	break;
     }
   }
 
   BODY.onclick= function (e) {    
 	if (e.srcElement.tagName=="A") { //not the middle button which opens a new tab
-//		alert('link type: '+ link_type(e.srcElement));
+	//	alert('link type: '+ link_type(e.srcElement));
 
 		if (link_type(e.srcElement)==LINK.REPLY) {
 			e.preventDefault();
@@ -413,3 +435,99 @@ function hover(e) {
      } 
   
 }
+
+/* dynamic_more(): replace functionality of anchor "More" with the given callback function;
+			
+	container: where the anchor <More> lives, should not be BODY because events are replaced.
+*/
+
+function dynamic_more(container,dom_id) {
+	//create this <input id='btn_more' href='$1' type=button value='More'>
+
+}
+
+var more_news=new MORE('news',"btn_news_more");
+var more_newest=new MORE('$content_newest',"btn_newest_more");
+
+function MORE(container, btn_dom_id) {
+	this.container=container;
+	this.dom_id=btn_dom_id;
+}	
+
+MORE.prototype.replace=function() {	
+	var res=this.replaceFunction();//,btn1.outerHTML);//container.innerHTML=res.html;
+	var aa=this;
+	var btn1=createButton({id:this.dom_id,href:res.href,click: function(e) {
+				e.srcElement.disabled=true;
+				var dom_id=e.srcElement.id, a=aa;
+				loadURL("http://"+host+this.href,function(data){a.display(data,dom_id);});		
+			 	document.getElementById("container_"+a.dom_id).innerHTML+="<img id='loading_"+dom_id+"' src='"+sIMG_LOADER+"'>";
+			}
+	});
+	document.getElementById("container_"+this.dom_id).appendChild(btn1);
+}
+
+/*
+	called when loadURL completes loading More page
+*/
+
+MORE.prototype.display=function(data) { 
+	data=data.contents.responseText;	
+	var tmp=document.createElement("div");
+	tmp.innerHTML=data;
+
+	tmp=getNewsTableFrom(tmp); //get only the news table;
+
+	removeElement("container_"+this.dom_id);//remove the previous container of the More button	
+	
+	document.getElementById(this.container).innerHTML+="<table bored=0 cellspacing=0 cellpadding=0>"+tmp.innerHTML+"</table>";
+
+	this.replace();
+};
+
+MORE.prototype.container=null;
+MORE.prototype.dom_id=null;
+
+function removeElement(id) {
+	var a=document.getElementById(id);
+	if (a.parentElement!=null)
+		a.parentElement.removeChild(a);
+	else if (a.removeNode!=null)
+		a.removeNode(true);
+}
+/* creates an HTML input element button
+   params.id
+*/
+createButton=function (params) {
+var btn1=document.createElement("input");
+	btn1.id=params.id;
+	btn1.value="More";
+	btn1.type="button";
+	btn1.href=params.href;
+	btn1.onclick= params.click;	
+return btn1;
+};
+
+MORE.prototype.replaceFunction=function() { //replaceWith) {
+	var container=document.getElementById(this.container);
+	
+	var replaceWith="<div id='container_"+this.dom_id+"'></div>";//:replaceWith;
+
+	var re=new RegExp("<a href=\"([^.<>]*)\" rel=\"nofollow\"[^>]*>More</a>");
+	var m=container.innerHTML.match(re);
+
+	container.innerHTML=container.innerHTML.replace(re,replaceWith);//"<input id='btn_more' href='$1' type=button value='More'>";);
+
+	//MORE.href=RegExp.$1;//res.href;
+
+	return {html: container.innerHTML, href:RegExp.$1,id:this.dom_id};
+
+};
+
+function DOM(dom) {
+	this.base=(dom!=null)?dom:document.body;
+}
+
+DOM.prototype.get= function(id) {
+	return this.base.getElementById(id);
+};
