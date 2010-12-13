@@ -91,8 +91,8 @@ var dim=calc_text(msg);
 	};
 }
 
-function loadURL(href,callback,method) { 
-	chrome.extension.sendRequest({user_info: href,method:method}, callback);
+function loadURL(href,callback,method,params) { 
+	chrome.extension.sendRequest({user_info: href,method:method,params:params}, callback);
 }
  
 
@@ -190,7 +190,7 @@ function callback_reply(data) {
 	frm[0].id="reply_form"+(++reply_forms);
 	
 //replace the functionality of the submit button
-	neo.innerHTML=neo.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input type=submit onclick=\""+String(enableForm)+" function send(_frm){ try { enableForm(_frm,false); } catch (ex) {alert('ex4::'+ex.message);} loadURL(_frm.action+'?fnid='+_frm.elements[0].value+'&text='+_frm.elements[1].value,function() { if (_frm.elements[1].value.length==0) enableForm(_frm);},_frm.method); return false;} return send(document.forms['reply_form"+reply_forms+"']);\" value=\"reply\">");				
+	neo.innerHTML=neo.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input type=submit onclick=\""+String(enableForm)+" function send(_frm){ try { enableForm(_frm,false); } catch (ex) {alert('ex4::'+ex.message);} sendForm(_frm,function() { if (_frm.elements[1].value.length==0) enableForm(_frm);}); return false;} return send(document.forms['reply_form"+reply_forms+"']);\" value=\"reply\">");				
 	neo.innerHTML=frm[0].outerHTML;
 
 	reply_link.parentNode.insertBefore(neo,reply_link.nextSibling)		
@@ -400,10 +400,32 @@ if (AVAILABLE)  {
 
 //loadurl script
 var s=document.createElement("script"); s.innerHTML="req=new XMLHttpRequest(); loadURL=function (url,callback,method) {req.onreadystatechange = callback;req.open(((method==null)?'GET':method),url,true);req.send();} ";
-//s.innerHTML+=" ";
 document.body.appendChild(s);
 
+var s2=document.createElement("script"); s2.innerHTML=String(sendForm);
+document.body.appendChild(s2);
+
 }  //-end-startup()
+
+function sendForm(form,callback) {
+	var params="";
+	for (var el in form.elements) {
+		params+=form.elements[el].name+"="+encodeURIComponent(form.elements[el].value)+"&";
+	}
+
+	if (params!=null) params=params.substring(0,params.length-1);
+
+	req.onreadystatechange = callback;
+
+	req.open(((form.method==null)?"GET":form.method),form.action,true);
+	
+	if (params!=null) {
+		req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		//req.setRequestHeader("Content-length", params.length);
+		//req.setRequestHeader("Connection", "close");
+		req.send(params); 
+	} else req.send();
+}
 
 function enableForm(form,flag){flag=(flag==null)?false:true; for (var el in form.elements){ form.elements[el].disabled=flag;} }
 
