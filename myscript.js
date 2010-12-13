@@ -1,3 +1,7 @@
+/*
+	forms should be named with a custom DOM ID, in case the DOM structure changes unexpectecly, so we make sure we send the right form.
+*/
+
 var AVAILABLE=true;
 var host=document.location.host;
 var NEWS_PAGE=[host+"/news",host+"/",host]; //this changes to /x
@@ -181,19 +185,37 @@ window.setTimeout(function() {loadURL(_url,((localStorage['current_page']!=null)
 
 } 
 var reply_forms=0;
+
 function callback_reply(data) {
 	deleteHourglass(reply_link);
 	neo=document.createElement("div");
 	neo.innerHTML=data.contents.responseText;
 	var frm=neo.getElementsByTagName("form");
 
+	var ta=neo.getElementsByTagName("textarea");
+	if (ta!=null) {ta[0].cols=null; ta[0].style.width="100%";}
+
 	frm[0].id="reply_form"+(++reply_forms);
 	
 //replace the functionality of the submit button
-	neo.innerHTML=neo.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input type=submit onclick=\""+String(enableForm)+" function send(_frm){ try { enableForm(_frm,false); } catch (ex) {alert('ex4::'+ex.message);} sendForm(_frm,function() { if (_frm.elements[1].value.length==0) enableForm(_frm);}); return false;} return send(document.forms['reply_form"+reply_forms+"']);\" value=\"reply\">");				
+	neo.innerHTML=neo.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input id='reply_text_"+reply_forms+"' type=submit value=\"reply\">");				
 	neo.innerHTML=frm[0].outerHTML;
 
 	reply_link.parentNode.insertBefore(neo,reply_link.nextSibling)		
+	document.getElementById('reply_text_'+reply_forms).onclick=function() {
+		function send(form){  
+			enableForm(form,false); 
+			sendForm(form,function(data) { 
+				//callback_click(data,true); //insert the new contents and scroll
+				if (form.elements[1].value.length==0) enableForm(form);
+
+			}); 
+			return false;
+		} 
+
+	    	return send(frm[0]);
+
+	};
 }
 
 var loaded;
@@ -212,7 +234,28 @@ function callback_click(data,user_click) {
 				newest_content.innerHTML=tmp.getElementsByTagName("td")[4].innerHTML;
 			
 				resizeSlide(65);
-				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input type=submit onclick=\"function enableForm(form,flag){flag=(flag==null)?false:true; for (var el in document.forms[0].elements){ document.forms[0].elements[el].disabled=flag;} } function send(){ try { enableForm(document.forms[0],false); } catch (ex) {alert('ex4::'+ex.message);} loadURL(document.forms[0].action+'?fnid='+document.forms[0].elements[0].value+'&text='+document.forms[0].elements[1].value,function() { if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);/*document.forms[0].elements[1].innerHTML='';*/},document.forms[0].method); return false;} return send();\" value=\"add comment\">");				
+				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input id='comment_input' type=submit nclick=\"\" value=\"add comment\">");				
+				document.getElementById('comment_input').onclick= function() {
+//comment click	
+function enableForm(form,flag){
+	flag=(flag==null)?false:true; 
+	for (var el in document.forms[0].elements){ 
+		document.forms[0].elements[el].disabled=flag;
+	} 
+} 
+function send(){ 
+	enableForm(document.forms[0],false); 
+	sendForm(document.forms[0],function(data) { 
+	callback_click(data,true); //insert the new contents;
+		if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);
+
+	}); 
+return false;
+} 
+
+return send();
+};
+			
 				if (user_click) {
 					//remove hourglass
 					
@@ -407,26 +450,6 @@ document.body.appendChild(s2);
 
 }  //-end-startup()
 
-function sendForm(form,callback) {
-	var params="";
-	for (var el in form.elements) {
-		params+=form.elements[el].name+"="+encodeURIComponent(form.elements[el].value)+"&";
-	}
-
-	if (params!=null) params=params.substring(0,params.length-1);
-
-	req.onreadystatechange = callback;
-
-	req.open(((form.method==null)?"GET":form.method),form.action,true);
-	
-	if (params!=null) {
-		req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-		//req.setRequestHeader("Content-length", params.length);
-		//req.setRequestHeader("Connection", "close");
-		req.send(params); 
-	} else req.send();
-}
-
 function enableForm(form,flag){flag=(flag==null)?false:true; for (var el in form.elements){ form.elements[el].disabled=flag;} }
 
 function deleteHourglass(el) {
@@ -553,3 +576,16 @@ function DOM(dom) {
 DOM.prototype.get= function(id) {
 	return this.base.getElementById(id);
 };
+
+function sendForm(form,callback) {
+	var params="";
+
+	for (var el in form.elements) {
+		params+=form.elements[el].name+"="+encodeURIComponent(form.elements[el].value)+"&";
+	}
+
+	if (params!=null) params=params.substring(0,params.length-1);
+
+	chrome.extension.sendRequest({user_info: form.action,method:form.method,params:params}, callback);
+}
+
