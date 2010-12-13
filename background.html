@@ -36,10 +36,12 @@ var xhr_cursor=0;
 var xhr_loading=0;
 var req=new XMLHttpRequest();
 
-function openXML(url,callback,method) {
+function openXML(url,callback,method,params) {
 	req.onreadystatechange = function() { callback(); }
-	req.open(((method==null)?"GET":method),url,true);
-	req.send();
+
+	req.open(((method==null)?"GET":"POST"),url,true);
+	
+ req.send();
 }
 
 function QUEUE(params) {
@@ -58,8 +60,8 @@ function executeQueue(wait) {
 	} else { xhr_loading=0; XHR=[]; xhr_cursor=0;}
 }
 function execute() {
-	var params=XHR[xhr_cursor++];
-	if (params!=undefined) openXML(params.url, params.callback);
+	var request=XHR[xhr_cursor++];
+	if (request!=undefined) openXML(request.url, request.callback,request.params);
 	
 }
 
