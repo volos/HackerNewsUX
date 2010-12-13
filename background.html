@@ -13,7 +13,6 @@
 sendResponse is the callback
 */
 function onRequest(request, sender, sendResponse) {
-
     if (request.user_info !=null) {
 
 	QUEUE({url:request.user_info,callback:function () {  
@@ -23,7 +22,7 @@ function onRequest(request, sender, sendResponse) {
 		    }
 		    executeQueue(true);
 	  	 }
-		}
+		},params:request.params,method:request.method
 	});
  	
     }  
@@ -37,11 +36,15 @@ var xhr_loading=0;
 var req=new XMLHttpRequest();
 
 function openXML(url,callback,method,params) {
-	req.onreadystatechange = function() { callback(); }
+	req.onreadystatechange = callback;
+//alert(url+"\n"+method+"\n"+params+"\n"+callback);
 
 	req.open(((method==null)?"GET":"POST"),url,true);
-	
- req.send();
+if (params!=null) {
+	req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	 req.send(params);
+} else req.send();
+
 }
 
 function QUEUE(params) {
@@ -61,7 +64,7 @@ function executeQueue(wait) {
 }
 function execute() {
 	var request=XHR[xhr_cursor++];
-	if (request!=undefined) openXML(request.url, request.callback,request.params);
+	if (request!=undefined) openXML(request.url, request.callback,request.method,request.params);
 	
 }
 
@@ -69,3 +72,4 @@ function execute() {
 <body>
 </body>
 </html>
+
