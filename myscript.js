@@ -204,12 +204,15 @@ function callback_reply(data) {
 	reply_link.parentNode.insertBefore(neo,reply_link.nextSibling)		
 	document.getElementById('reply_text_'+reply_forms).onclick=function() {
 		function send(form){  
+		if(form.elements[1].value.length>0) {
 			enableForm(form,false); 
 			sendForm(form,function(data) { 
 				//callback_click(data,true); //insert the new contents and scroll
+				
 				if (form.elements[1].value.length==0) enableForm(form);
 
 			}); 
+		}
 			return false;
 		} 
 
@@ -234,22 +237,19 @@ function callback_click(data,user_click) {
 				newest_content.innerHTML=tmp.getElementsByTagName("td")[4].innerHTML;
 			
 				resizeSlide(65);
-				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input id='comment_input' type=submit nclick=\"\" value=\"add comment\">");				
+				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input id='comment_input' type=submit value=\"add comment\">");				
 				document.getElementById('comment_input').onclick= function() {
 //comment click	
-function enableForm(form,flag){
-	flag=(flag==null)?false:true; 
-	for (var el in document.forms[0].elements){ 
-		document.forms[0].elements[el].disabled=flag;
-	} 
-} 
+  
 function send(){ 
+if (document.forms[0].elements[1].length>0) {
 	enableForm(document.forms[0],false); 
 	sendForm(document.forms[0],function(data) { 
-	callback_click(data,true); //insert the new contents;
-		if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);
+		callback_click(data,true); //insert the new contents;
+			if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);
 
-	}); 
+		}); 
+}
 return false;
 } 
 
@@ -324,10 +324,12 @@ function animate(callback) {
 
 function response_newest(data) { 
 	data.contents=data.contents.responseText;
+
 	var content_newest =document.getElementById("$content_newest");
 
 	resizeSlide(50);
-	 q='<tr><td><table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">(.*)More</a></td></tr></table></td></tr><tr><td>';
+	 //q='<tr><td><table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">(.*)More</a></td></tr></table></td></tr><tr><td>';
+q='<tr><td><table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">([\\w\\s\\D]*?)More</a></td></tr></table></td></tr><tr><td>';
 
 	re=new RegExp(q,"g");
 	m = data.contents.match(re);
@@ -336,7 +338,11 @@ function response_newest(data) {
 			content_newest.innerHTML=m[i];//'<table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">'+RegExp.$1+"</table>";
 		}
 	}
- 
+
+/*tmp_html
+content_newest.innerHTML=data.contents;
+content_newest.innerHTML=content_newest.innerHTML.getElementsByTagName("table")[2];
+ */
 	content_newest.innerHTML=content_newest.innerHTML.replace(/id=\"([^\s>]*)\"/g,"id=\"$1_HN\"");
 	content_newest.innerHTML=content_newest.innerHTML.replace(/return (vote\(this\))/g,vote_function);
 	more_newest.replace();
