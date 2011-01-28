@@ -240,9 +240,9 @@ function callback_click(data,user_click) {
 				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input id='comment_input' type=submit value=\"add comment\">");				
 				document.getElementById('comment_input').onclick= function() {
 //comment click	
-  
+
 function send(){ 
-if (document.forms[0].elements[1].length>0) {
+if (document.forms[0].elements[1].value.length>0) {
 	enableForm(document.forms[0],false); 
 	sendForm(document.forms[0],function(data) { 
 		callback_click(data,true); //insert the new contents;
