@@ -382,7 +382,7 @@ if (AVAILABLE)  {
 	//	alert('link type: '+ link_type(e.srcElement));
 
 		if (link_type(e.srcElement)==LINK.REPLY) {
-			e.preventDefault();
+			//e.preventDefault();
 
 			
 			deleteHourglass(reply_link);
@@ -404,7 +404,7 @@ if (AVAILABLE)  {
 			}
 		} else {
 			if (document.getElementById('td2')!=null) {
-				e.preventDefault();
+				//e.preventDefault();
 				deleteHourglass(loading_link);
 
 				loading_link=e.srcElement;
