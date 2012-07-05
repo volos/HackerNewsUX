@@ -6,7 +6,7 @@
  
   "content_scripts": [
     {
-      "matches": ["http://news.ycombinator.net/*","http://news.ycombinator.org/*","http://news.ycombinator.com/*","http://hackerne.ws/*"],     
+      "matches": ["http://news.ycombinator.net/*","http://news.ycombinator.org/*","http://news.ycombinator.com/*","http://hackerne.ws/*","https://news.ycombinator.com/*"],     
 	"css":["style.css"],
       "js": ["myscript.js"],
 	"run_at":"document_end"
