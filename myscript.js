@@ -2,28 +2,46 @@
 	forms should be named with a custom DOM ID, in case the DOM structure changes unexpectecly, so we make sure we send the right form.
 */
 
-var AVAILABLE=true;
-var host="//"+document.location.host;
-var PROTOCOL=document.location.protocol;
-var NEWS_PAGE=[host+"/news",host+"/",host]; //this changes to /x
-var update_time=1400;
-var sIMG_LOADER = chrome.extension.getURL("images/ajax-loader.gif");
-var t;
+var 
+	AVAILABLE=true,
+	host="//"+document.location.host,
+ 	PROTOCOL=document.location.protocol,
+//this changes to /x
+	NEWS_PAGE=[host+"/news",host+"/",host], 
+	
+	update_time=1400,
+	sIMG_LOADER = chrome.extension.getURL("images/ajax-loader.gif"),
+	t,
+	timers=[],
+	port,
 
+	maintenance=false,
+	version  ="1.3.2",
+
+	prev, 
+	username_hover,
+	username_hover_out, 
+	BODY,
+	obj1,
+	text_calc;
+
+var EVENTS={CLICK:"click"};
 
 function calc_text (html) { 
 	text_calc.html(html);
 	var height = (text_calc.height());//+ "px";
 	var width = (text_calc.width());//+ "px";
-return {height:height,width:width};
+
+	return {height:height,width:width};
 }
-var timers=[];
-function PopupMessage(id) {
-	 
-}
+
+
+function PopupMessage(id) {}
+
 PopupMessage.prototype.start=function(callback, time) {
 	this.timer=window.setTimeout(callback,(time==null)?200:time);
 };
+
 PopupMessage.prototype.destroy=function() {
 	if (this.timer!=null) {
 		window.clearTimeout(this.timer);
@@ -31,9 +49,9 @@ PopupMessage.prototype.destroy=function() {
 	}
 //	alert(this.timer);
 };
+
 PopupMessage.prototype.timer=null;
 
-var prev, username_hover, username_hover_out, BODY,obj1,text_calc;
 
 BODY=document.getElementsByTagName("body")[0];
 
@@ -55,6 +73,8 @@ function upTo(el, id) {
   return null;
   }
 }
+
+
 function find_parent (id, el) {
     // loop up until parent element is found
     while (el && el.id !== id) {
@@ -63,68 +83,72 @@ function find_parent (id, el) {
     // return found element
     return el;
 };
-var port;
 
-var maintenance=true;
 
 window.onload=function() {
 	$.ajax({
 		url: "https://hackerne.ws/hackernewsux",//ROOT_ADMIN+"list-investment-accounts.jsp",
 		type: "GET",
+		data: {
+			"version": String(version)
+		},
 
 		dataType: "json", //MIME must be "application/json"
 		timeout: 3000
 	}).done(function(data){
 		try {
 
-			if ((maintenance && data["status"]=="maintenance") || data["status"]=="available") {
+			if ((maintenance && data["status"]=="maintenance") ||
+				(data["status_"+version]=="available")) {
 					startup();
 			} else {
-
 //				alert("not available");
 			}
 		} catch (X) {
 			console.log("json parse error")
 		}
 	})
-	.fail(function() {
+	.fail(function(jqXHR, textStatus, errorThrown) {
+			console.log("fail to get status: "+textStatus);
 			startup();
 		});
 }
+
+
 function response_userinfo(data) {
    data.contents=data.contents.responseText;
 	
    var info=['karma','about','avg','created'];
    var q,re,m,res='',i,results={};
+   
    for (var k in info) {
+		q=info[k]+":</td><td>([\\w\\s\\D]*?)</td>";
 
-    q=info[k]+":</td><td>([\\w\\s\\D]*?)</td>";
+      	re = new RegExp(q, "g");
+      	m = data.contents.match(re);
 
-      re = new RegExp(q, "g");
-      m = data.contents.match(re);
-
-	if ( m != null) {
-		for ( i = 0; i < m.length; i++ ) {
-			//res += m[i];
-			results[info[k]]=RegExp.$1;
+		if ( m != null) {
+			for ( i = 0; i < m.length; i++ ) {
+				//res += m[i];
+				results[info[k]]=RegExp.$1;
+			}
 		}
+   	}
+	if (results.about!=null) {
+		var r=new RegExp("("+"http"+":[^\r\n<>]*)","g");//   /(http:[^\r\n\s<>]*)/g
+		results.about=results.about.replace(r,"<a class=lnk_out target=_blank href='$1'>$1</a>");	
+		var r=new RegExp("("+"https"+":[^\r\n<>]*)","g");//   /(http:[^\r\n\s<>]*)/g
+		results.about=results.about.replace(r,"<a class=lnk_out target=_blank href='$1'>$1</a>");	
 	}
-   }
-if (results.about!=null) {
-	var r=new RegExp("("+"http"+":[^\r\n<>]*)","g");//   /(http:[^\r\n\s<>]*)/g
-	results.about=results.about.replace(r,"<a class=lnk_out target=_blank href='$1'>$1</a>");	
-	var r=new RegExp("("+"https"+":[^\r\n<>]*)","g");//   /(http:[^\r\n\s<>]*)/g
-	results.about=results.about.replace(r,"<a class=lnk_out target=_blank href='$1'>$1</a>");	
-}
 
-var msg="karma: "+ results.karma+" | avg: "+results.avg+" | created: "+results.created+"<hr size=1>"+
-	"<div style='margin-bottom:4px'>about </div>"+ ((results.about!=undefined)?results.about:"");
+	var msg="karma: "+ results.karma+" | avg: "+results.avg+" | created: "+results.created+"<hr size=1>"+
+		"<div style='margin-bottom:4px'>about </div>"+ ((results.about!=undefined)?results.about:"");
 
-var tooltip_txtcolor="black";
-var tooltip_bgcolor="#FFFFCC";//#FFFFCC
-var dim=calc_text(msg);
+	var tooltip_txtcolor="black";
+	var tooltip_bgcolor="#FFFFCC";//#FFFFCC
+	var dim=calc_text(msg);
 
-   obj1.innerHTML=""+
+   	obj1.innerHTML=""+
 		"<div id='user_inf' style='width:400px;position:relative'>"+
 			"<div style='width:100%;-webkit-opacity:0.9;height:"+dim.height+";position:absolute;border: 1px solid #eeeebb; background-color: "+tooltip_bgcolor+"'></div>"+
 			"<div style='font-size:12px;color:"+tooltip_txtcolor+";width:100%;position:absolute;z-index:2;padding:4px 4px;'>"+
@@ -132,24 +156,23 @@ var dim=calc_text(msg);
 			"</div>"+
 		  "</div>"+
 		"";
-   obj1.onmouseover=function(e) {	
-   		//console.log('destroy the timer that will hide user info')
-		username_hover_out.destroy(); //the timer that hides obj1
-	
-	};	
+   	obj1.onmouseover=function(e) {	
+	   		//console.log('destroy the timer that will hide user info')
+			username_hover_out.destroy(); //the timer that hides obj1
+		};	
+
 	$(obj1).mouseleave(function() {
 		obj1.style.display='none';
 	});
 
-   obj1.onclick=function(e) {
+   	obj1.onclick=function(e) {
 		obj1.style.display='none';
 	};
 }
 
-function loadURL(href,callback,method,params) { 
 
-console.log("loadURL >"+href);
-//	chrome.extension.sendMessage
+function loadURL(href,callback,method,params) { 
+	console.log("loadURL >"+href);
 	onRequest({user_info: href,method:method,params:params}, callback);
 }
  
@@ -171,63 +194,57 @@ function link_type(t) {
 	return false;
 }
 
-var EVENTS={CLICK:"click"};
-
 function getNewsTableFrom(container) { 
 	return container.getElementsByTagName("table")[2].cloneNode(true);
 }
 
 function right_panel() {
-//change more functionality to dynamic
+	//change more functionality to dynamic
+	// append right column
 
-//alert(BODY.innerHTML.match(new RegExp("<a href=\"([^\r\n\s<>]*)\" rel=\"nofollow\"[^>]*>More</a>")));
+	news_table=getNewsTableFrom(document);
 
+	t1=document.createElement("table");
+	tb1=document.createElement("tbody");
+	tr1=document.createElement("tr");
 
-// append right column
+	td1=document.createElement("td");
+	td1.id='news';
+	td1.appendChild(news_table);
+	td1.vAlign="top";
+	//td1.width="80%";
+	tr1.appendChild(td1);
 
-news_table=getNewsTableFrom(document);
+	tmp=document.createElement("td");
+	tmp.width="1%";
+	tmp.innerHTML="&nbsp;";
+	tr1.appendChild(tmp);
 
-t1=document.createElement("table");
-tb1=document.createElement("tbody");
-tr1=document.createElement("tr");
+	td2=document.createElement("td");
+	td2.width='25%';td2.innerHTML='&nbsp';
+	td2.id='td2';
+	td2.vAlign="top";
+	td2.style.borderLeft="1px solid #dfdfdf";
+	td2.innerHTML="<div id='$content_newest' style='margin-left:6px;color:black'>"+"<img src='"+sIMG_LOADER+"'>"+"</div>";//";//<iframe id='$content_iframe' frameborder=0 style='display:none;width:100%;height:100%'></iframe>
+	tr1.appendChild(td2);
 
-td1=document.createElement("td");
-td1.id='news';
-td1.appendChild(news_table);
-td1.vAlign="top";
-//td1.width="80%";
-tr1.appendChild(td1);
+	tb1.appendChild(tr1);
+	t1.appendChild(tb1);
+	/*
+	the problem is that threads are created by changing the width of a transparent image to a set width in pixels, therefore a table with a width% that results in less when calc-ed than the maximum trnsprent image width, the column cannot be minimized to 25%;
+	*/
 
-tmp=document.createElement("td");
-tmp.width="1%";
-tmp.innerHTML="&nbsp;";
-tr1.appendChild(tmp);
+	document.getElementsByTagName("td")[4].innerHTML="";
 
-td2=document.createElement("td");
-td2.width='25%';td2.innerHTML='&nbsp';
-td2.id='td2';
-td2.vAlign="top";
-td2.style.borderLeft="1px solid #dfdfdf";
-td2.innerHTML="<div id='$content_newest' style='margin-left:6px;color:black'>"+"<img src='"+sIMG_LOADER+"'>"+"</div>";//";//<iframe id='$content_iframe' frameborder=0 style='display:none;width:100%;height:100%'></iframe>
-tr1.appendChild(td2);
+	t1.style.padding = "0px 0px";
+	t1.cellPadding = "0";
+	t1.cellSpacing = "0";
 
-tb1.appendChild(tr1);
-t1.appendChild(tb1);
-/*
-the problem is that threads are created by changing the width of a transparent image to a set width in pixels, therefore a table with a width% that results in less when calc-ed than the maximum trnsprent image width, the column cannot be minimized to 25%;
-*/
-
-document.getElementsByTagName("td")[4].innerHTML="";
-
-t1.style.padding = "0px 0px";
-t1.cellPadding = "0";
-t1.cellSpacing = "0";
-
-document.getElementsByTagName("td")[4].appendChild(t1);
+	document.getElementsByTagName("td")[4].appendChild(t1);
 
 
-var _to="/newest";
-if ((_url=localStorage['current_page'])==null) {_url=PROTOCOL+host+_to;}; 
+	var _to="/newest";
+	if ((_url=localStorage['current_page'])==null) {_url=PROTOCOL+host+_to;}; 
 
 	try {
 		more_news.replace(); //if replacemetn made before t1 appended, make sure there isnt direct call to document.innerhtml because news_table wont exist already
@@ -243,8 +260,9 @@ if ((_url=localStorage['current_page'])==null) {_url=PROTOCOL+host+_to;};
 				update_time
 			);
 	}
-
 } 
+
+
 var reply_forms=0;
 
 function callback_reply(data) {
@@ -283,69 +301,70 @@ function callback_reply(data) {
 var loaded;
 var MANUAL_CLICK=true;
 var debug;
+
 function callback_click(data,user_click) {
-				if(loading_link!=null) {
-						deleteHourglass(loading_link);
-						loaded=loading_link;
-					}
+	if(loading_link!=null) {
+			deleteHourglass(loading_link);
+			loaded=loading_link;
+		}
 
-				var tmp=document.createElement("div");
-				tmp.innerHTML=data.contents.responseText;
-		 
-				console.log(debug);
-				var ta=tmp.getElementsByTagName("textarea");
-				if (ta.length>0)  {ta[0].cols=null; ta[0].style.width="100%";}
-				var newest_content=document.getElementById('$content_newest');
-				newest_content.innerHTML=tmp.getElementsByTagName("td")[4].innerHTML;
-			
-				resizeSlide(65);
-				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input id='comment_input' type=submit value=\"add comment\">");				
-				
-				$input=document.getElementById('comment_input');
-				if ($input)
-				$input.onclick= function() {
-					//comment click	
+	var tmp=document.createElement("div");
+	tmp.innerHTML=data.contents.responseText;
 
-					function send(){ 
-					if (document.forms[0].elements[1].value.length>0) {
-						enableForm(document.forms[0],false); 
-						sendForm(document.forms[0],function(data) { 
-							callback_click(data,true); //insert the new contents;
-								if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);
+	console.log(debug);
+	var ta=tmp.getElementsByTagName("textarea");
+	if (ta.length>0)  {ta[0].cols=null; ta[0].style.width="100%";}
+	var newest_content=document.getElementById('$content_newest');
+	newest_content.innerHTML=tmp.getElementsByTagName("td")[4].innerHTML;
 
-							}); 
-					}
-					return false;
-					} 
-
-					return send();
-				};
-			
-				if (user_click) {
-					//remove hourglass
-					
-					var s; t=500;//msec, in how much time to complete the visual
-					var interval=30; //update interval of screen
-			
-					var steps=t/interval;//determines smoothness
-
-					if ((s=parseInt(BODY.scrollTop))>0) {
-						v=(s*1000)/t; //velocity per ms, to complete the distance in req. time
-
-					s=(v/1000)*interval;
-						
-					animate(function () {
+	resizeSlide(65);
+	newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input id='comment_input' type=submit value=\"add comment\">");				
 	
-						if (parseInt(BODY.scrollTop)>0) {
-							BODY.scrollTop-=s;	
-							return true;
-						}
-					return false;
-					});}
-					
-				} else {localStorage.removeItem('current_page');}
-				
+	$input=document.getElementById('comment_input');
+	if ($input)
+	$input.onclick= function() {
+		//comment click	
+
+		function send(){ 
+		if (document.forms[0].elements[1].value.length>0) {
+			enableForm(document.forms[0],false); 
+			sendForm(document.forms[0],function(data) { 
+				callback_click(data,true); //insert the new contents;
+					if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);
+
+				}); 
+		}
+		return false;
+		} 
+
+		return send();
+	};
+
+	if (user_click) {
+		//remove hourglass
+		
+		var s; t=500;//msec, in how much time to complete the visual
+		var interval=30; //update interval of screen
+
+		var steps=t/interval;//determines smoothness
+
+		if ((s=parseInt(BODY.scrollTop))>0) {
+			v=(s*1000)/t; //velocity per ms, to complete the distance in req. time
+
+		s=(v/1000)*interval;
+			
+		animate(function () {
+
+			if (parseInt(BODY.scrollTop)>0) {
+				BODY.scrollTop-=s;	
+				return true;
 			}
+		return false;
+		});}
+		
+	} else {localStorage.removeItem('current_page');}
+	
+}
 
 var vote_function="function vote2(node) {GLO='1';"+//"var node=this;"+
 ""+
@@ -382,10 +401,13 @@ function resizeSlide(targetWidth) {
 			}
 		); 
 }
+
+
 function animate(callback) {
 	var speed;
 	if (callback()) window.setTimeout(function() {animate(callback)},30);
 }
+
 
 function response_newest(data) { 
 	//console.log('response_newest >' + data.contents.responseText)
@@ -394,41 +416,19 @@ function response_newest(data) {
 	var content_newest =document.getElementById("$content_newest");
 	//content_newest.innerHTML=
 	resizeSlide(50);
-	 //q='<tr><td><table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">(.*)More</a></td></tr></table></td></tr><tr><td>';
-//q='<tr><td><table border="0" cellpadding="0" cellspacing="0"><tr><td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr></table></td></tr><tr><td>';
-	
-	//q='<tr><td colspan="2"></td><td class="title">([\\w\\s\\D]*?)More</a></td></tr>'
+//	q='<tr><td><table border="0" cellpadding="0" cellspacing="0">(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr>(?:[\\s\\S]*)</table></td></tr><tr><td>';
 
-//q='<tr><td><table border="0" cellpadding="0" cellspacing="0">([\s\S])*<tr>([\s\S])*<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr>([\s\S])*</table></td></tr><tr><td>';
-	q='<tr><td><table border="0" cellpadding="0" cellspacing="0">(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr>(?:[\\s\\S]*)</table></td></tr><tr><td>';
+	q='<tr><td>(?:[\\s\\S]*)<tr class=\'athing\'>(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)</table>(?:[\\s\\r\\n]*)</td></tr><tr><td>';
 
 	re=new RegExp(q,"gi");
-//	alert(data.contents)
-//	m = data.contents.match(re);
+
 	m= re.exec(data.contents)
-//	alert(m)
-//	alert(m.length)
-/*
-	if ( m != null) {
-		for ( i = 0; i < m.length; i++ ) { 
-			console.log(m[i])
-			content_newest.innerHTML=m[i];//'<table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">'+RegExp.$1+"</table>";
-		}
-	}*/
-	content_newest.innerHTML=m[0]
-//	q='<tr><td><table border="0" cellpadding="0" cellspacing="0" [\\w\\s\D\"]><tr><td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr></table></td></tr><tr><td>';
-//	content_newest.innerHTML=data.contents.replace(
 
-//		);
+	content_newest.innerHTML=m[0];
 
-/*tmp_html
-content_newest.innerHTML=data.contents;
-content_newest.innerHTML=content_newest.innerHTML.getElementsByTagName("table")[2];
- */
-// console.log(data.contents)
 	content_newest.innerHTML=content_newest.innerHTML.replace(/id=\"([^\s>]*)\"/g,"id=\"$1_HN\"");
 	content_newest.innerHTML=content_newest.innerHTML.replace(/return (vote\(this\))/g,vote_function);
-	//console.log(content_newest.innerHTML)
+
 	more_newest.replace();
 }
 
@@ -539,18 +539,8 @@ function startup() {
     }
   };
 
-
-  	//BODY.addEventListener('click', BODYonclick);
 	BODY.addEventListener('mouseover', BODYonmouseover);
-
 }
-
-//loadurl script
-//var s=document.createElement("script"); s.innerHTML="req=new XMLHttpRequest(); loadURL=function (url,callback,method) {req.onreadystatechange = callback;req.open(((method==null)?'GET':method),url,true);req.send();} ";
-//document.body.appendChild(s);
-
-//var s2=document.createElement("script"); s2.innerHTML=String(sendForm);
-//document.body.appendChild(s2);
 
 }  //-end-startup()
 
@@ -569,28 +559,27 @@ function deleteHourglass(el) {
 		el.innerHTML=el.innerHTML.substring(0,el.innerHTML.indexOf("&"));				
 
 }
+
+
 function createHourglass(el) {
 	el.innerHTML+="&nbsp;<img src='"+sIMG_LOADER+"'>";
 }
+
+
 function hover(e) {
    var t;
-
-     username_hover.destroy(); //the timer that showed hover
+	username_hover.destroy(); //the timer that showed hover
 	
      if (prev!=e.srcElement.href) {
-  	
-	prev=e.srcElement.href;
-	obj1.style.display='';
+		prev=e.srcElement.href;
+		obj1.style.display='';
 
-	obj1.style.left=BODY.scrollLeft+e.clientX;
-	obj1.style.top=BODY.scrollTop+e.clientY-30;
-	loadURL(e.srcElement.href,response_userinfo); 
+		obj1.style.left=BODY.scrollLeft+e.clientX;
+		obj1.style.top=BODY.scrollTop+e.clientY-30;
+		loadURL(e.srcElement.href,response_userinfo); 
 
-	obj1.innerHTML="<img src='"+sIMG_LOADER+"'>";
-
-	
-     } 
-  
+		obj1.innerHTML="<img src='"+sIMG_LOADER+"'>";	
+	}			 	
 }
 
 /* dynamic_more(): replace functionality of anchor "More" with the given callback function;
@@ -736,6 +725,7 @@ function onRequest(request, sendResponse) {
     }
 }
 
+
 var XHR=[];
 var xhr_cursor=0;
 var xhr_loading=0;
@@ -750,10 +740,12 @@ function openXML(url,callback,method,params) {
 	} else req.send();
 }
 
+
 function QUEUE(params) {
 	XHR[XHR.length]=params;
 	if (xhr_loading==0) executeQueue();
 }
+
 
 function executeQueue(wait) {
 	if (XHR.length>0 && xhr_cursor+1<=XHR.length) {
@@ -765,6 +757,7 @@ function executeQueue(wait) {
 		}
 	} else { xhr_loading=0; XHR=[]; xhr_cursor=0;}
 }
+
 
 function execute() {
 	var request=XHR[xhr_cursor++];
