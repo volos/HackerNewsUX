@@ -3,17 +3,18 @@
 */
 
 var AVAILABLE=true;
-var host=document.location.host;
+var host="//"+document.location.host;
+var PROTOCOL=document.location.protocol;
 var NEWS_PAGE=[host+"/news",host+"/",host]; //this changes to /x
 var update_time=1400;
 var sIMG_LOADER = chrome.extension.getURL("images/ajax-loader.gif");
 var t;
 
 
-function calc_text (html) {
-	text_calc.innerHTML=html;
-	var height = (text_calc.clientHeight) + "px";
-	var width = (text_calc.clientWidth) + "px";
+function calc_text (html) { 
+	text_calc.html(html);
+	var height = (text_calc.height());//+ "px";
+	var width = (text_calc.width());//+ "px";
 return {height:height,width:width};
 }
 var timers=[];
@@ -36,13 +37,60 @@ var prev, username_hover, username_hover_out, BODY,obj1,text_calc;
 
 BODY=document.getElementsByTagName("body")[0];
 
+function upTo(el, id) {
 
+//  var t = el.parentNode;
+  id = id.toLowerCase();
 
+  while (t) {
 
+    if (t.id && t.id.toLowerCase() == id) {
+      return t;
+    }
+    t=el.parentNode;
+  // Many DOM methods return null if they don't 
+  // find the element they are searching for
+  // It would be OK to omit the following and just
+  // return undefined
+  return null;
+  }
+}
+function find_parent (id, el) {
+    // loop up until parent element is found
+    while (el && el.id !== id) {
+        el = el.parentNode;
+    }
+    // return found element
+    return el;
+};
 var port;
 
-window.onload=startup;
+var maintenance=true;
 
+window.onload=function() {
+	$.ajax({
+		url: "https://hackerne.ws/hackernewsux",//ROOT_ADMIN+"list-investment-accounts.jsp",
+		type: "GET",
+
+		dataType: "json", //MIME must be "application/json"
+		timeout: 3000
+	}).done(function(data){
+		try {
+
+			if ((maintenance && data["status"]=="maintenance") || data["status"]=="available") {
+					startup();
+			} else {
+
+//				alert("not available");
+			}
+		} catch (X) {
+			console.log("json parse error")
+		}
+	})
+	.fail(function() {
+			startup();
+		});
+}
 function response_userinfo(data) {
    data.contents=data.contents.responseText;
 	
@@ -63,7 +111,10 @@ function response_userinfo(data) {
 	}
    }
 if (results.about!=null) {
-	results.about=results.about.replace(/(http:[^\r\n\s<>]*)/g,"<a class=lnk_out target=_blank href='$1'>$1</a>");	
+	var r=new RegExp("("+"http"+":[^\r\n<>]*)","g");//   /(http:[^\r\n\s<>]*)/g
+	results.about=results.about.replace(r,"<a class=lnk_out target=_blank href='$1'>$1</a>");	
+	var r=new RegExp("("+"https"+":[^\r\n<>]*)","g");//   /(http:[^\r\n\s<>]*)/g
+	results.about=results.about.replace(r,"<a class=lnk_out target=_blank href='$1'>$1</a>");	
 }
 
 var msg="karma: "+ results.karma+" | avg: "+results.avg+" | created: "+results.created+"<hr size=1>"+
@@ -74,7 +125,7 @@ var tooltip_bgcolor="#FFFFCC";//#FFFFCC
 var dim=calc_text(msg);
 
    obj1.innerHTML=""+
-		"<div style='width:400px;position:relative'>"+
+		"<div id='user_inf' style='width:400px;position:relative'>"+
 			"<div style='width:100%;-webkit-opacity:0.9;height:"+dim.height+";position:absolute;border: 1px solid #eeeebb; background-color: "+tooltip_bgcolor+"'></div>"+
 			"<div style='font-size:12px;color:"+tooltip_txtcolor+";width:100%;position:absolute;z-index:2;padding:4px 4px;'>"+
 				msg+
@@ -82,21 +133,24 @@ var dim=calc_text(msg);
 		  "</div>"+
 		"";
    obj1.onmouseover=function(e) {	
+   		//console.log('destroy the timer that will hide user info')
 		username_hover_out.destroy(); //the timer that hides obj1
 	
 	};	
-   obj1.onmouseout=function(e) {
-		username_hover_out.start(function(e) {
-			obj1.style.display='none';						
-		});
-	};
+	$(obj1).mouseleave(function() {
+		obj1.style.display='none';
+	});
+
    obj1.onclick=function(e) {
 		obj1.style.display='none';
 	};
 }
 
 function loadURL(href,callback,method,params) { 
-	chrome.extension.sendRequest({user_info: href,method:method,params:params}, callback);
+
+console.log("loadURL >"+href);
+//	chrome.extension.sendMessage
+	onRequest({user_info: href,method:method,params:params}, callback);
 }
  
 
@@ -173,15 +227,22 @@ document.getElementsByTagName("td")[4].appendChild(t1);
 
 
 var _to="/newest";
-if ((_url=localStorage['current_page'])==null) {_url="http://"+document.location.host+_to;}; 
+if ((_url=localStorage['current_page'])==null) {_url=PROTOCOL+host+_to;}; 
 
-
-try {
-	more_news.replace(); //if replacemetn made before t1 appended, make sure there isnt direct call to document.innerhtml because news_table wont exist already
-} catch (Ex1) {alert('ex1::'+Ex1.message);}
-finally{
-window.setTimeout(function() {loadURL(_url,((localStorage['current_page']!=null)?callback_click:response_newest)); }, update_time);
-}
+	try {
+		more_news.replace(); //if replacemetn made before t1 appended, make sure there isnt direct call to document.innerhtml because news_table wont exist already
+	} 
+	catch (Ex1) {
+		alert('ex1::'+Ex1.message);
+	}
+	finally{
+		window.setTimeout(
+				function() {
+					loadURL(_url,((localStorage['current_page']!=null)?callback_click:response_newest)); 
+				}, 
+				update_time
+			);
+	}
 
 } 
 var reply_forms=0;
@@ -202,27 +263,26 @@ function callback_reply(data) {
 	neo.innerHTML=frm[0].outerHTML;
 
 	reply_link.parentNode.insertBefore(neo,reply_link.nextSibling)		
-	document.getElementById('reply_text_'+reply_forms).onclick=function() {
-		function send(form){  
-		if(form.elements[1].value.length>0) {
-			enableForm(form,false); 
-			sendForm(form,function(data) { 
-				//callback_click(data,true); //insert the new contents and scroll
-				
-				if (form.elements[1].value.length==0) enableForm(form);
+	var onclick=function() {
+		return (function send(form){  
+			if(form.elements[1].value.length>0) {
+				enableForm(form,false); 
+				sendForm(form,function(data) { 
+					//callback_click(data,true); //insert the new contents and scroll
+					
+					if (form.elements[1].value.length==0) enableForm(form);
 
-			}); 
-		}
+				}); 
+			}
 			return false;
-		} 
-
-	    	return send(frm[0]);
-
+		})(frm[0]);
 	};
+	document.getElementById('reply_text_'+reply_forms).addEventListener("click",onclick);
 }
 
 var loaded;
 var MANUAL_CLICK=true;
+var debug;
 function callback_click(data,user_click) {
 				if(loading_link!=null) {
 						deleteHourglass(loading_link);
@@ -231,30 +291,35 @@ function callback_click(data,user_click) {
 
 				var tmp=document.createElement("div");
 				tmp.innerHTML=data.contents.responseText;
+		 
+				console.log(debug);
 				var ta=tmp.getElementsByTagName("textarea");
-				if (ta!=null) {ta[0].cols=null; ta[0].style.width="100%";}
+				if (ta.length>0)  {ta[0].cols=null; ta[0].style.width="100%";}
 				var newest_content=document.getElementById('$content_newest');
 				newest_content.innerHTML=tmp.getElementsByTagName("td")[4].innerHTML;
 			
 				resizeSlide(65);
 				newest_content.innerHTML=newest_content.innerHTML.replace(/<input type=\"submit\"[^>]*>/g,"<input id='comment_input' type=submit value=\"add comment\">");				
-				document.getElementById('comment_input').onclick= function() {
-//comment click	
+				
+				$input=document.getElementById('comment_input');
+				if ($input)
+				$input.onclick= function() {
+					//comment click	
 
-function send(){ 
-if (document.forms[0].elements[1].value.length>0) {
-	enableForm(document.forms[0],false); 
-	sendForm(document.forms[0],function(data) { 
-		callback_click(data,true); //insert the new contents;
-			if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);
+					function send(){ 
+					if (document.forms[0].elements[1].value.length>0) {
+						enableForm(document.forms[0],false); 
+						sendForm(document.forms[0],function(data) { 
+							callback_click(data,true); //insert the new contents;
+								if (document.forms[0].elements[1].value.length==0) enableForm(document.forms[0]);
 
-		}); 
-}
-return false;
-} 
+							}); 
+					}
+					return false;
+					} 
 
-return send();
-};
+					return send();
+				};
 			
 				if (user_click) {
 					//remove hourglass
@@ -323,33 +388,54 @@ function animate(callback) {
 }
 
 function response_newest(data) { 
+	//console.log('response_newest >' + data.contents.responseText)
 	data.contents=data.contents.responseText;
 
 	var content_newest =document.getElementById("$content_newest");
-
+	//content_newest.innerHTML=
 	resizeSlide(50);
 	 //q='<tr><td><table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">(.*)More</a></td></tr></table></td></tr><tr><td>';
-q='<tr><td><table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">([\\w\\s\\D]*?)More</a></td></tr></table></td></tr><tr><td>';
+//q='<tr><td><table border="0" cellpadding="0" cellspacing="0"><tr><td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr></table></td></tr><tr><td>';
+	
+	//q='<tr><td colspan="2"></td><td class="title">([\\w\\s\\D]*?)More</a></td></tr>'
 
-	re=new RegExp(q,"g");
-	m = data.contents.match(re);
+//q='<tr><td><table border="0" cellpadding="0" cellspacing="0">([\s\S])*<tr>([\s\S])*<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr>([\s\S])*</table></td></tr><tr><td>';
+	q='<tr><td><table border="0" cellpadding="0" cellspacing="0">(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr>(?:[\\s\\S]*)</table></td></tr><tr><td>';
+
+	re=new RegExp(q,"gi");
+//	alert(data.contents)
+//	m = data.contents.match(re);
+	m= re.exec(data.contents)
+//	alert(m)
+//	alert(m.length)
+/*
 	if ( m != null) {
 		for ( i = 0; i < m.length; i++ ) { 
+			console.log(m[i])
 			content_newest.innerHTML=m[i];//'<table border=0 cellpadding=0 cellspacing=0><tr><td align=right valign=top class="title">'+RegExp.$1+"</table>";
 		}
-	}
+	}*/
+	content_newest.innerHTML=m[0]
+//	q='<tr><td><table border="0" cellpadding="0" cellspacing="0" [\\w\\s\D\"]><tr><td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr></table></td></tr><tr><td>';
+//	content_newest.innerHTML=data.contents.replace(
+
+//		);
 
 /*tmp_html
 content_newest.innerHTML=data.contents;
 content_newest.innerHTML=content_newest.innerHTML.getElementsByTagName("table")[2];
  */
+// console.log(data.contents)
 	content_newest.innerHTML=content_newest.innerHTML.replace(/id=\"([^\s>]*)\"/g,"id=\"$1_HN\"");
 	content_newest.innerHTML=content_newest.innerHTML.replace(/return (vote\(this\))/g,vote_function);
+	//console.log(content_newest.innerHTML)
 	more_newest.replace();
 }
 
 var _; //instance of the dom framework
 function startup() {
+	console.log('startup');
+
 	_=new DOM(BODY);
 
 	username_hover=new PopupMessage();
@@ -360,29 +446,32 @@ function startup() {
 		obj1.innerHTML="$user";
 		obj1.style.display='none';
 	BODY.appendChild(obj1);
+ 
+	text_calc=$("<div class='test'></div>").width(400).css("position","absolute").css("left","-4000");
+		
+	$("body").append(
+			text_calc
+		);	 
+	
 
-	text_calc=document.createElement("div");
-		text_calc.className="test";
-		text_calc.style.pixelWidth="400";
-		text_calc.style.position="absolute";
-		text_calc.style.pixelLeft="-4000";
-	BODY.appendChild(text_calc);
+	if (AVAILABLE)  {
 
-if (AVAILABLE)  {
+	  for (var j in NEWS_PAGE) {
+	  	//console.log(PROTOCOL+NEWS_PAGE[j])
+	    if (document.location.href==PROTOCOL+NEWS_PAGE[j]) { 
+		right_panel();
+		
+		break;
+	    }
+	  }
 
-  for (var j in NEWS_PAGE) {
-    if (document.location.href=="http://"+NEWS_PAGE[j]) { 
-	right_panel();
-	break;
-    }
-  }
 
   BODY.onclick= function (e) {    
 	if (e.srcElement.tagName=="A") { //not the middle button which opens a new tab
 	//	alert('link type: '+ link_type(e.srcElement));
 
 		if (link_type(e.srcElement)==LINK.REPLY) {
-			//e.preventDefault();
+			e.preventDefault();
 
 			
 			deleteHourglass(reply_link);
@@ -403,8 +492,8 @@ if (AVAILABLE)  {
 				//top.location.href=e.srcElement.href;		 
 			}
 		} else {
-			if (document.getElementById('td2')!=null) {
-				//e.preventDefault();
+			if (document.getElementById('td2')!=null && e.button!=1) {
+				e.preventDefault();
 				deleteHourglass(loading_link);
 
 				loading_link=e.srcElement;
@@ -424,37 +513,54 @@ if (AVAILABLE)  {
   };
 
 
+  var BODYonmouseover= function(e) { 
+	if ((t=e.srcElement.href)!=null) if (t.indexOf("user?")!=-1) {
 
-  BODY.onmouseover= function(e) { 
-   if ((t=e.srcElement.href)!=null) if (t.indexOf("user?")!=-1) {
+		var a=e;
 
-	var a=e;
-	username_hover_out.destroy(); //remove the timer that hides the tooltip
+		username_hover_out.destroy(); //remove the timer that hides the tooltip
+		username_hover.start(function() {hover(a)}, 350);
 
-	username_hover.start(function() {hover(a)}, 350);
+		if (e.srcElement.onmouseout==null)  {			
+			onmouseout=function(e) {	
+				//if (e.srcElement.parentNode.id=='user_inf') return;
+				// return;
 
-	if (e.srcElement.onmouseout==null)
-		e.srcElement.onmouseout=function(e) {	
-			username_hover.destroy();
-			prev=''; var o=e;	
-			username_hover_out.start(function(e) {
-				obj1.style.display='none';						
-				//o.srcElement.onmouseout=null;
-			},200);
-		};
+				username_hover.destroy();
+				prev=''; var o=e;	
+				username_hover_out.start(function(e) {
+					//obj1.style.display='none';						
+					//console.log(448)
+					//o.srcElement.onmouseout=null;
+				},200);		
+			};
+			e.srcElement.addEventListener("mouseout",onmouseout);
+		}
     }
   };
+
+
+  	//BODY.addEventListener('click', BODYonclick);
+	BODY.addEventListener('mouseover', BODYonmouseover);
+
 }
 
-
 //loadurl script
-var s=document.createElement("script"); s.innerHTML="req=new XMLHttpRequest(); loadURL=function (url,callback,method) {req.onreadystatechange = callback;req.open(((method==null)?'GET':method),url,true);req.send();} ";
-document.body.appendChild(s);
+//var s=document.createElement("script"); s.innerHTML="req=new XMLHttpRequest(); loadURL=function (url,callback,method) {req.onreadystatechange = callback;req.open(((method==null)?'GET':method),url,true);req.send();} ";
+//document.body.appendChild(s);
 
-var s2=document.createElement("script"); s2.innerHTML=String(sendForm);
-document.body.appendChild(s2);
+//var s2=document.createElement("script"); s2.innerHTML=String(sendForm);
+//document.body.appendChild(s2);
 
 }  //-end-startup()
+
+function LOAD_URL_html (url,callback,method) {
+	var req=new XMLHttpRequest(); 
+	
+	req.onreadystatechange = callback;
+	req.open(((method==null)?'GET':method),url,true);
+	req.send();
+}
 
 function enableForm(form,flag){flag=(flag==null)?false:true; for (var el in form.elements){ form.elements[el].disabled=flag;} }
 
@@ -476,8 +582,8 @@ function hover(e) {
 	prev=e.srcElement.href;
 	obj1.style.display='';
 
-	obj1.style.pixelLeft=BODY.scrollLeft+e.clientX;
-	obj1.style.pixelTop=BODY.scrollTop+e.clientY-30;
+	obj1.style.left=BODY.scrollLeft+e.clientX;
+	obj1.style.top=BODY.scrollTop+e.clientY-30;
 	loadURL(e.srcElement.href,response_userinfo); 
 
 	obj1.innerHTML="<img src='"+sIMG_LOADER+"'>";
@@ -508,14 +614,27 @@ function MORE(container, btn_dom_id) {
 MORE.prototype.replace=function() {	
 	var res=this.replaceFunction();//,btn1.outerHTML);//container.innerHTML=res.html;
 	var aa=this;
+	var c="container_"+this.dom_id;
+	c=document.getElementById(c);			 	
+	
 	var btn1=createButton({id:this.dom_id,href:res.href,click: function(e) {
 				e.srcElement.disabled=true;
 				var dom_id=e.srcElement.id, a=aa;
-				loadURL("http://"+host+this.href,function(data){a.display(data,dom_id);});		
-			 	document.getElementById("container_"+a.dom_id).innerHTML+="<img id='loading_"+dom_id+"' src='"+sIMG_LOADER+"'>";
+				
+				if (this.href.indexOf("/")!=0) this.href="/"+this.href;
+
+				//console.log("get news from"+this.href)
+				
+				loadURL(PROTOCOL+host+this.href,function(data){a.display(data,dom_id);});		
+			 	var c="container_"+aa.dom_id;
+			 	document.getElementById(c);
+			 	if (c!=null)
+				 	c.innerHTML+="<img id='loading_"+dom_id+"' src='"+sIMG_LOADER+"'>";
 			}
 	});
-	document.getElementById("container_"+this.dom_id).appendChild(btn1);
+//	console.log(this.dom_id);
+	if (c!=null)
+		c.appendChild(btn1);
 }
 
 /*
@@ -526,7 +645,7 @@ MORE.prototype.display=function(data) {
 	data=data.contents.responseText;	
 	var tmp=document.createElement("div");
 	tmp.innerHTML=data;
-
+	//console.log(tmp)
 	tmp=getNewsTableFrom(tmp); //get only the news table;
 
 	removeElement("container_"+this.dom_id);//remove the previous container of the More button	
@@ -564,14 +683,14 @@ MORE.prototype.replaceFunction=function() { //replaceWith) {
 	
 	var replaceWith="<div id='container_"+this.dom_id+"'></div>";//:replaceWith;
 
-	var re=new RegExp("<a href=\"([^.<>]*)\" rel=\"nofollow\"[^>]*>More</a>");
+	var re=new RegExp("<a href=\"([^.<>]*)\"[^>]*>More</a>");
 	var m=container.innerHTML.match(re);
 
 	container.innerHTML=container.innerHTML.replace(re,replaceWith);//"<input id='btn_more' href='$1' type=button value='More'>";);
 
 	//MORE.href=RegExp.$1;//res.href;
-
-	return {html: container.innerHTML, href:RegExp.$1,id:this.dom_id};
+//dirty fix because once is news2 other time x?id
+	return {html: container.innerHTML, href:RegExp.$1.split(" ")[0].replace("\"",""),id:this.dom_id};
 
 };
 
@@ -592,6 +711,63 @@ function sendForm(form,callback) {
 
 	if (params!=null) params=params.substring(0,params.length-1);
 
-	chrome.extension.sendRequest({user_info: form.action,method:form.method,params:params}, callback);
+	//chrome.extension.sendMessage({user_info: form.action,method:form.method,params:params}, callback);
+
+	onRequest({user_info: form.action,method:form.method,params:params}, callback);
 }
 
+function onRequest(request, sendResponse) {
+    if (request.user_info !=null) {
+
+		QUEUE({url:request.user_info,callback:function () { 
+		console.log("onRequest.callback > " + req.status+","+req.readyState);
+		//console.log(req.responseText); 
+		 if (req.readyState == 4) {
+            if (req.status == 200) {
+				sendResponse({contents: req})
+	    	}
+		    executeQueue(true);
+	  	 }
+		},params:request.params,method:request.method
+	});
+ 	
+    } else {
+    	log.console('28 something missing')
+    }
+}
+
+var XHR=[];
+var xhr_cursor=0;
+var xhr_loading=0;
+var req=new XMLHttpRequest();
+
+function openXML(url,callback,method,params) {
+	req.onreadystatechange = callback;
+	req.open(((method==null)?"GET":"POST"),url,true);
+	if (params!=null) {
+		req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+		 req.send(params);
+	} else req.send();
+}
+
+function QUEUE(params) {
+	XHR[XHR.length]=params;
+	if (xhr_loading==0) executeQueue();
+}
+
+function executeQueue(wait) {
+	if (XHR.length>0 && xhr_cursor+1<=XHR.length) {
+		xhr_loading=1;
+	 	if (wait) { //to get outside of the recursive, if called within onreadystatechange
+			window.setTimeout(function() {execute();},100);
+		} else {
+			execute();
+		}
+	} else { xhr_loading=0; XHR=[]; xhr_cursor=0;}
+}
+
+function execute() {
+	var request=XHR[xhr_cursor++];
+	if (request!=undefined) openXML(request.url, request.callback,request.method,request.params);
+}
+ 
