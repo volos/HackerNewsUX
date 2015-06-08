@@ -1,6 +1,12 @@
 /*
 	forms should be named with a custom DOM ID, in case the DOM structure changes unexpectecly, so we make sure we send the right form.
+
+	new RegExp(/([\d]+)(?:(\2)[\.])/g).exec(
+	document.querySelector("#news").querySelectorAll("table")[2].querySelectorAll("tr.athing")[5].querySelector("td").innerHTML
+	);
+
 */
+
 
 var 
 	AVAILABLE=true,
@@ -16,8 +22,9 @@ var
 	port,
 
 	maintenance=false,
-	version  ="1.3.2",
-
+	//add .dev in the end to disable sending the version, so, that maintance flag can be used
+	//version  ="1.3.3.dev",
+	version="1.3.3",
 	prev, 
 	username_hover,
 	username_hover_out, 
@@ -89,9 +96,9 @@ window.onload=function() {
 	$.ajax({
 		url: "https://hackerne.ws/hackernewsux",//ROOT_ADMIN+"list-investment-accounts.jsp",
 		type: "GET",
-		data: {
+		data: (version.indexOf(".dev")==-1)?{
 			"version": String(version)
-		},
+		}: {},
 
 		dataType: "json", //MIME must be "application/json"
 		timeout: 3000
@@ -102,6 +109,7 @@ window.onload=function() {
 				(data["status_"+version]=="available")) {
 					startup();
 			} else {
+				console.log(version +" is not available. "+data['status']);
 //				alert("not available");
 			}
 		} catch (X) {
@@ -408,6 +416,9 @@ function animate(callback) {
 	if (callback()) window.setTimeout(function() {animate(callback)},30);
 }
 
+function indexStoryItems() {
+
+}
 
 function response_newest(data) { 
 	//console.log('response_newest >' + data.contents.responseText)
@@ -418,8 +429,9 @@ function response_newest(data) {
 	resizeSlide(50);
 //	q='<tr><td><table border="0" cellpadding="0" cellspacing="0">(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr>(?:[\\s\\S]*)</table></td></tr><tr><td>';
 
-	q='<tr><td>(?:[\\s\\S]*)<tr class=\'athing\'>(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)</table>(?:[\\s\\r\\n]*)</td></tr><tr><td>';
-
+//	q='<tr><td>(?:[\\s\\S]*)<tr class=\'athing\'>(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)</table>(?:[\\s\\r\\n]*)</td></tr><tr><td>';
+	q='<tr><td>(?:[\\s\\S]*)<table border="0" cellpadding="0" cellspacing="0">(?:[\\s\\S]*)<tr class=\'athing\'>(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)</table>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)<tr><td>'
+	
 	re=new RegExp(q,"gi");
 
 	m= re.exec(data.contents)
@@ -430,11 +442,13 @@ function response_newest(data) {
 	content_newest.innerHTML=content_newest.innerHTML.replace(/return (vote\(this\))/g,vote_function);
 
 	more_newest.replace();
+
+
 }
 
 var _; //instance of the dom framework
 function startup() {
-	console.log('startup');
+	console.log('startup, version ='+version);
 
 	_=new DOM(BODY);
 
