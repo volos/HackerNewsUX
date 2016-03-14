@@ -21,10 +21,11 @@ var
 	timers=[],
 	port,
 
+
 	maintenance=false,
 	//add .dev in the end to disable sending the version, so, that maintance flag can be used
 	//version  ="1.3.3.dev",
-	version="1.3.3",
+	version="1.3.4",
 	prev, 
 	username_hover,
 	username_hover_out, 
@@ -109,6 +110,11 @@ window.onload=function() {
 				(data["status_"+version]=="available")) {
 					startup();
 			} else {
+				// if (development()) {
+
+				// 	startup();
+				// }
+				// else
 				console.log(version +" is not available. "+data['status']);
 //				alert("not available");
 			}
@@ -430,8 +436,9 @@ function response_newest(data) {
 //	q='<tr><td><table border="0" cellpadding="0" cellspacing="0">(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a></td></tr>(?:[\\s\\S]*)</table></td></tr><tr><td>';
 
 //	q='<tr><td>(?:[\\s\\S]*)<tr class=\'athing\'>(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)</table>(?:[\\s\\r\\n]*)</td></tr><tr><td>';
-	q='<tr><td>(?:[\\s\\S]*)<table border="0" cellpadding="0" cellspacing="0">(?:[\\s\\S]*)<tr class=\'athing\'>(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)</table>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)<tr><td>'
-	
+	//q='<tr><td>(?:[\\s\\S]*)<table border="0" cellpadding="0" cellspacing="0">(?:[\\s\\S]*)<tr class=\'athing\'>(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)</table>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)<tr><td>'
+	q='<tr><td>(?:[\\s\\S]*)<table border="0" cellpadding="0" cellspacing="0" ([\\w\\d="]*)?>(?:[\\s\\S]*)<tr class=\'athing\'>(?:[\\s\\S]*)<td align="right" valign="top" class="title">([\\w\\s\\D]*?)More</a>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)</table>(?:[\\s\\r\\n]*)</td></tr>(?:[\\s\\r\\n]*)<tr><td>';
+
 	re=new RegExp(q,"gi");
 
 	m= re.exec(data.contents)
@@ -448,7 +455,7 @@ function response_newest(data) {
 
 var _; //instance of the dom framework
 function startup() {
-	console.log('startup, version ='+version);
+	console.log('startup, version ='+version);//+",dev="+development);
 
 	_=new DOM(BODY);
 
